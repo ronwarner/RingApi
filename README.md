@@ -17,8 +17,25 @@
 This library for C# compiled against .NET Standard will allow you to easily communicate with the Ring API and retrieve details about your Ring doorbells and Ring chimes.
 
 If you're just looking for a tool to download your Ring recordings, [go here instead](https://github.com/KoenZomers/RingRecordingDownload).
+If you're looking for a tool to download snapshots from your Ring cameras, [go here](https://github.com/KoenZomers/RingSnapshotDownload).
 
 ## Version History
+
+0.4.3.2 - released April 29, 2020
+
+- Bugfix in `GetDoorbotsHistory` throwing a NullReferenceException when the Ring API would return an empty result
+
+0.4.3.1 - released March 18, 2020
+
+- Added exception of type `DeviceUnknownException` to be thrown when using `GetDoorbotsHistory` requesting information for a specific Ring device which does not exist
+
+0.4.3.0 - released March 18, 2020
+
+- Added `GetDoorbotsHistory` method which allows providing a specific doorbot id to retrieve only the items for that specific doorbot
+
+0.4.2.2 - released March 16, 2020
+
+- Merged [PR # 13](https://github.com/KoenZomers/RingApi/pull/13) adding possible exceptions to each method call and doing some code efficiency improvements. Thanks to [ronwarner](https://github.com/ronwarner) for his contribution!
 
 0.4.2.1 - released January 22, 2020
 
@@ -114,7 +131,7 @@ This API is built using Microsoft .NET Standard 2.0 and is fully asynchronous
 
 ## Usage Instructions
 
-To communicate with the Ring API, add the NuGet package to your solution and add a using reference in your code:
+To communicate with the Ring API, [add the NuGet package](https://github.com/KoenZomers/RingApi#available-via-nuget) to your solution and add a using reference in your code:
 
 ```C#
 using KoenZomers.Ring.Api;
@@ -132,7 +149,7 @@ Note that this line does not perform any communications with the Ring API yet. Y
 await session.Authenticate();
 ```
 
-If the Ring account you're connecting with has been set up with a two factor authentication requirement, wait for the text message from Ring to arrive on your mobile phone and run Authenticate again providing this code:
+If the Ring account you're connecting with has been set up with a two factor authentication requirement, wait for the text message or e-mail from Ring with the code to arrive and run Authenticate again providing this code:
 
 ```C#
 await session.Authenticate(twoFactorAuthCode: "12345");
@@ -142,36 +159,43 @@ If the account does not require two factor authentication, you can skip this ste
 
 Once this succeeds, you can call one of the methods on the session instance to retrieve data, i.e.:
 
+To retrieve all Ring devices connected to your account to i.e. retrieve the device Id needed for some methods:
+
 ```C#
-// Retrieves all recorded doorbell events
+var devices = await session.GetRingDevices();
+```
+
+To retrieve all recorded doorbell events including the recording Ids which you will need for the next two samples:
+
+```C#
 var doorbotHistory = await session.GetDoorbotsHistory();
 ```
 
-To save a recording directly to your disk:
+To save a recording directly to your disk (use GetDoorbotsHistory to get the Id):
 
 ```C#
 await session.GetDoorbotHistoryRecording("6000000004618901011", "c:\\temp\\recording.mp4");
 ```
 
-To share a recording:
+To share a recording (use GetDoorbotsHistory to get the Id):
 
 ```C#
 await session.ShareRecording("6000000004618901011");
 ```
 
-To retrieve the latest available snapshot from a doorbot and save it to disk:
+To retrieve the latest available snapshot from a doorbot and save it to disk (use GetRingDevices to get the Id):
 
 ```C#
 await session.GetLatestSnapshot(1111111, "c:\\temp\\snapshot.jpg");
 ```
 
-To force a new snapshot to be taken from a doorbot:
+To force a new snapshot to be taken from a doorbot (use GetRingDevices to get the Id):
 
 ```C#
 await session.UpdateSnapshot(1111111);
 ```
 
-To retrieve the date and time at which the last snapshot was taken from a doorbot:
+To retrieve the date and time at which the last snapshot was taken from a doorbot (use GetRingDevices to get the Id):
 
 ```C#
 var timestamps = await session.GetDoorbotSnapshotTimestamp(1111111);
@@ -179,7 +203,7 @@ var timestamps = await session.GetDoorbotSnapshotTimestamp(1111111);
 
 ### Unit Tests
 
-Check out the UnitTest project in this solution for full insight in the possibilities and working code samples. If you want to run the Unit Tests, just copy the App.sample.config file in the UnitTest project to App.config and fill in your Ring username and password and you're good to go to run all tests. They will not make any changes to your Ring devices or Ring profile, just retrieve information, so you can run it without any risk.
+Check out the UnitTest project in this solution for full insight in the possibilities and working code samples. If you want to run the Unit Tests, just copy the App.sample.config file in the UnitTest project to App.config and fill in your Ring username and password and you're good to go to run all tests. They will not make any changes to your Ring devices or Ring profile, just retrieve information, so you can run it without any risk. If you're using text message or e-mail message two factor authentication on the Ring account you want to perform the unit tests with, just leave `TwoFactorAuthenticationToken` empty in the config file, run the unit tests, wait for the text or e-mail message to arrive, enter the code from the text or e-mail message in the `TwoFactorAuthenticationToken` appSetting in the config file and run the unit tests again. It should now succeed and update the `RingRefreshToken` appSetting with a valid refresh token it can use on subsequent runs so it no longer needs credentials or two factor authentication to run the unit tests.
 
 ## Available via NuGet
 
